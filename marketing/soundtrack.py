@@ -65,10 +65,11 @@ for s, e, notes in chords:
     for m in notes:
         for det in (-0.07, 0.0, 0.07):
             f = note(m) * 2 ** (det / 12)
-            seg += ((tt * f) % 1.0 * 2 - 1) * 0.05
-    fade = np.minimum(1, tt / 0.35) * np.minimum(1, (len(tt) / SR - tt) / 0.4)
+            ph = (tt * f) % 1.0
+            seg += (np.sin(2 * np.pi * ph) * 0.75 + (2 * np.abs(2 * ph - 1) - 1) * 0.25) * 0.045
+    fade = np.minimum(1, tt / 1.2) * np.minimum(1, (len(tt) / SR - tt) / 0.9)
     pad[i:j] += seg * fade
-cut = 500 + 2600 * np.clip((t - 2.9) / 6.7, 0, 1) + 1800 * np.clip((t - 9.6) / 1.0, 0, 1) - 1500 * np.clip((t - 24.5) / 2.5, 0, 1)
+cut = 400 + 900 * np.clip((t - 2.9) / 6.7, 0, 1) + 500 * np.clip((t - 9.6) / 1.0, 0, 1) - 600 * np.clip((t - 24.5) / 2.5, 0, 1)
 pad = lowpass(pad, cut)
 add(pad, 0, 0.9, -0.15)
 add(np.roll(pad, at(0.012)), 0, 0.9, 0.15)
@@ -76,10 +77,10 @@ add(np.roll(pad, at(0.012)), 0, 0.9, 0.15)
 # ---------------------------------------------------------------- wind swell under the logo, and a riser before the outro
 noise = rng.standard_normal(N)
 swell = lowpass(noise, 300 + 3000 * np.clip(t / 2.9, 0, 1) ** 2) * np.clip(t / 2.9, 0, 1) ** 2 * (t < 3.0)
-add(swell, 0, 0.35)
+add(swell, 0, 0.12)
 riser_t = np.clip((t - 21.1) / 2.6, 0, 1)
-riser = lowpass(noise, 400 + 7000 * riser_t ** 2) * riser_t ** 3 * (t < 23.75)
-add(riser, 0, 0.32)
+riser = lowpass(noise, 300 + 1500 * riser_t ** 2) * riser_t ** 3 * (t < 23.75)
+add(riser, 0, 0.08)
 
 # ---------------------------------------------------------------- hits: sub boom + noise crack
 def hit(gain=1.0):
@@ -88,7 +89,8 @@ def hit(gain=1.0):
     f = 30 + 90 * np.exp(-tt * 18)
     sub = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 2.4)
     crack = lowpass(rng.standard_normal(n), 3500) * np.exp(-tt * 14)
-    return (sub * 0.9 + crack * 0.35) * gain
+    bloom = np.sin(2 * np.pi * 55 * tt) * np.minimum(1, tt / 0.04) * np.exp(-tt * 1.8)
+    return bloom * 0.5 * gain
 
 for s, g in ((2.9, 1.0), (9.6, 0.9), (23.7, 1.1)):
     add(hit(g), s)
@@ -98,23 +100,23 @@ def whoosh():
     n = at(0.55)
     tt = np.arange(n) / SR
     shape = np.sin(np.pi * np.clip(tt / 0.55, 0, 1)) ** 2
-    return lowpass(rng.standard_normal(n), 800 + 6000 * tt / 0.55) * shape
+    return lowpass(rng.standard_normal(n), 300 + 1400 * tt / 0.55) * shape
 
 for s in (11.1, 12.6, 14.1, 15.6, 17.1, 18.7, 20.9):
-    add(whoosh(), s - 0.35, 0.45, rng.uniform(-0.4, 0.4))
+    add(whoosh(), s - 0.35, 0.12, rng.uniform(-0.4, 0.4))
 
 # ---------------------------------------------------------------- drums from the montage on (120 bpm)
 def kick():
     n = at(0.45)
     tt = np.arange(n) / SR
-    f = 45 + 120 * np.exp(-tt * 30)
-    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 7)
+    f = 50 + 40 * np.exp(-tt * 25)
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.minimum(1, tt / 0.006) * np.exp(-tt * 9)
 
 def snap():
     n = at(0.25)
     tt = np.arange(n) / SR
     body = np.sin(2 * np.pi * 190 * tt) * np.exp(-tt * 30)
-    return (lowpass(rng.standard_normal(n), 6000) * np.exp(-tt * 22) + body * 0.4)
+    return np.sin(2 * np.pi * 330 * tt) * np.exp(-tt * 45) * 0.5
 
 def hat():
     n = at(0.06)
@@ -125,11 +127,11 @@ def hat():
 beat = 0.5
 b = 9.6
 while b < 23.6:
-    add(kick(), b, 0.85)
+    add(kick(), b, 0.42)
     k = round((b - 9.6) / beat)
     if k % 2 == 1:
-        add(snap(), b, 0.32)
-    add(hat(), b + beat / 2, 0.18, 0.3)
+        add(snap(), b, 0.07)
+    pass
     b += beat
 
 # ---------------------------------------------------------------- bass on the root, eighth-note pulse
@@ -140,8 +142,8 @@ for s, e, m in roots:
         n = at(0.24)
         tt = np.arange(n) / SR
         f = note(m)
-        tone = (np.sin(2 * np.pi * f * tt) + 0.35 * np.sin(4 * np.pi * f * tt)) * env(n, 0.004, 0.2)
-        add(tone, x, 0.32 if s >= 9.6 else 0.16)
+        tone = np.sin(2 * np.pi * f * tt) * env(n, 0.02, 0.22)
+        add(tone, x, 0.16 if s >= 9.6 else 0.08)
         x += 0.25
 
 # ---------------------------------------------------------------- arpeggio: bell-like plucks walking the chord
@@ -149,12 +151,12 @@ arp_chords = [(5.2, 9.6, [69, 72, 76, 79]), (9.6, 14.1, [69, 72, 76, 81]), (14.1
 for s, e, notes in arp_chords:
     x, k = s, 0
     while x < e - 0.01:
-        n = at(0.5)
+        n = at(0.9)
         tt = np.arange(n) / SR
         f = note(notes[[0, 1, 2, 3, 2, 1][k % 6]])
-        bell = (np.sin(2 * np.pi * f * tt) + 0.25 * np.sin(2 * np.pi * f * 2.01 * tt) + 0.1 * np.sin(2 * np.pi * f * 3.98 * tt)) * env(n, 0.002, 0.28)
-        add(bell, x, 0.12, 0.35 if k % 2 else -0.35)
-        x += 0.25
+        bell = (np.sin(2 * np.pi * f / 2 * tt) + 0.12 * np.sin(2 * np.pi * f * tt)) * env(n, 0.01, 0.45)
+        add(bell, x, 0.07, 0.3 if k % 2 else -0.3)
+        x += 0.5
         k += 1
 
 # ---------------------------------------------------------------- final chime on the logo
@@ -162,7 +164,7 @@ for i, m in enumerate([81, 84, 88]):
     n = at(3.0)
     tt = np.arange(n) / SR
     f = note(m)
-    add((np.sin(2 * np.pi * f * tt) + 0.2 * np.sin(2 * np.pi * f * 3 * tt)) * env(n, 0.003, 1.6), 23.8 + i * 0.12, 0.13, (i - 1) * 0.4)
+    add(np.sin(2 * np.pi * f / 2 * tt) * env(n, 0.02, 1.8), 23.8 + i * 0.18, 0.06, (i - 1) * 0.4)
 
 # ---------------------------------------------------------------- simple room: short stereo echoes
 wet = np.zeros_like(mix)
@@ -175,9 +177,9 @@ mix = mix + wet
 # ---------------------------------------------------------------- master: fade, soft clip, normalise
 fade = np.clip((DUR - t) / 2.0, 0, 1)[:, None] * np.clip(t / 0.05, 0, 1)[:, None]
 mix *= fade
-mix = np.tanh(mix * 1.2)
+mix = np.stack([lowpass(mix[:, 0], 5000), lowpass(mix[:, 1], 5000)], axis=1)
 mix /= np.max(np.abs(mix)) + 1e-9
-mix *= 0.89
+mix *= 0.6
 out = (mix * 32767).astype(np.int16)
 with wave.open(sys.argv[1], "wb") as w:
     w.setnchannels(2)
