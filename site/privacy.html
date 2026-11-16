@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy — WindX</title>
+<meta name="description" content="WindX collects nothing. Here is exactly what it does and doesn't do with your data.">
+<link rel="icon" href="assets/favicon.ico">
+<style>
+  body { margin: 0; background: #07070c; color: #f2f3f8; font: 17px/1.7 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { width: min(720px, 100% - 40px); margin: 0 auto; padding: 64px 0 90px; }
+  a { color: #7aa2ff; }
+  h1 { font-size: clamp(36px, 6vw, 52px); letter-spacing: -0.02em; line-height: 1.1; margin: 26px 0 8px; }
+  h2 { font-size: 22px; margin: 42px 0 8px; letter-spacing: -0.01em; }
+  p, li { color: #b9bccb; } li { margin: 6px 0; }
+  .dim { color: #8b8ea1; font-size: 15px; }
+  .box { padding: 20px 22px; border-radius: 16px; background: #11111c; border: 1px solid #1e1e2e; margin: 22px 0; }
+  .box p { margin: 0; color: #f2f3f8; }
+  code { font-family: "Cascadia Mono", Consolas, monospace; font-size: .9em; background: #15151f; padding: 2px 6px; border-radius: 6px; color: #dfe2f1; }
+</style>
+</head>
+<body>
+<main>
+  <a href="./">← Back to WindX</a>
+  <h1>Privacy policy</h1>
+  <p class="dim">Applies to WindX 1.0 and this website. Last updated 15 November 2026.</p>
+
+  <div class="box"><p><b>The short version:</b> WindX does not collect, store or send any information about you. There is no account, no analytics, no advertising and no telemetry.</p></div>
+
+  <h2>What stays on your PC</h2>
+  <ul>
+    <li><b>Your settings</b> (theme, which controls are shown, your weather city) are saved in one small file at <code>%AppData%\WindX\settings.json</code>.</li>
+    <li><b>An error log</b> may be written to <code>%AppData%\WindX\error.log</code> if something goes wrong. It is never uploaded anywhere.</li>
+    <li><b>What's playing, your volume, brightness, battery, CPU and memory</b> are read from Windows to draw the island. They are shown on screen and then forgotten. Nothing is recorded.</li>
+  </ul>
+  <p>Deleting the <code>%AppData%\WindX</code> folder removes everything WindX has ever saved.</p>
+
+  <h2>The one thing that uses the internet</h2>
+  <p>Weather is <b>off by default</b>. If you type a city in Settings, WindX asks <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> for that city's forecast:</p>
+  <ul>
+    <li>once to look the city up by the name you typed, and</li>
+    <li>about every 30 minutes for the forecast, sending only that city's coordinates rounded to two decimal places.</li>
+  </ul>
+  <p>No identifier, no account and nothing about your PC is included. As with any web request, Open-Meteo's servers can see your IP address; see <a href="https://open-meteo.com/en/terms" rel="noopener">their terms</a>. Press <b>Turn off</b> in Settings and WindX makes no network requests at all.</p>
+
+  <h2>What WindX can change on your PC</h2>
+  <p>Only what you press: volume, mute, screen brightness, Wi-Fi and Bluetooth on/off, media play/pause/skip, and opening the Windows snipping tool. If you switch on <b>Start with Windows</b>, it adds one entry under your own user's startup list, and removes it when you switch that off. WindX never asks for administrator rights.</p>
+
+  <h2>This website</h2>
+  <p>This site has no cookies, no analytics scripts and no third-party trackers. It is hosted on Netlify, which, like every web host, processes basic request data such as your IP address to deliver the pages; see <a href="https://www.netlify.com/privacy/" rel="noopener">Netlify's privacy policy</a>.</p>
+
+  <h2>Open source</h2>
+  <p>WindX is released under the MIT licence. You don't have to take any of this on trust: the full source code is public and you can build the app yourself.</p>
+
+  <h2>Changes</h2>
+  <p>If a future version changes any of this, this page will say so before that version is released.</p>
+</main>
+</body>
+</html>

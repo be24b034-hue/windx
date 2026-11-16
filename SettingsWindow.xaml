@@ -1,0 +1,218 @@
+<Window x:Class="WindX.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WindX Settings"
+        Width="940" Height="700" MinWidth="760" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        Background="#0E0E0F" Foreground="#F4F1EA"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14"
+        UseLayoutRounding="True">
+    <!-- This window keeps its own fixed palette (ink / paper / ember) so it stays readable whatever island theme is picked. -->
+    <Window.Resources>
+        <!-- Switch -->
+        <Style x:Key="Switch" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="track" Width="44" Height="26" CornerRadius="13" Background="#2E2E32">
+                            <Ellipse x:Name="thumb" Width="20" Height="20" Fill="#F4F1EA"
+                                     HorizontalAlignment="Left" Margin="3,0"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="track" Property="Background" Value="#FF5B1F"/>
+                                <Setter TargetName="thumb" Property="Fill" Value="#FFFFFF"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ThicknessAnimation Storyboard.TargetName="thumb" Storyboard.TargetProperty="Margin" To="21,0,3,0" Duration="0:0:0.18">
+                                                <ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction>
+                                            </ThicknessAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ThicknessAnimation Storyboard.TargetName="thumb" Storyboard.TargetProperty="Margin" To="3,0,3,0" Duration="0:0:0.18">
+                                                <ThicknessAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></ThicknessAnimation.EasingFunction>
+                                            </ThicknessAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="track" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Segmented choice -->
+        <Style x:Key="Segment" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Foreground" Value="#A8A49B"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bg" CornerRadius="9" Background="Transparent" Padding="15,7">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#27272A"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#F4F1EA"/>
+                                <Setter Property="Foreground" Value="#0E0E0F"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sidebar item -->
+        <Style x:Key="NavItem" TargetType="RadioButton">
+            <Setter Property="GroupName" Value="nav"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Foreground" Value="#9A968D"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bg" CornerRadius="10" Background="Transparent">
+                            <Grid>
+                                <Border x:Name="bar" Width="3" Height="16" CornerRadius="1.5" Background="#FF5B1F"
+                                        HorizontalAlignment="Left" Opacity="0"/>
+                                <ContentPresenter Margin="14,0,10,0" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#161618"/>
+                                <Setter Property="Foreground" Value="#F4F1EA"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#1B1B1E"/>
+                                <Setter TargetName="bar" Property="Opacity" Value="1"/>
+                                <Setter Property="Foreground" Value="#F4F1EA"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlainButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Foreground" Value="#F4F1EA"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" CornerRadius="10" Background="#222225" Padding="18,9">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#2D2D31"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Field" TargetType="TextBox">
+            <Setter Property="Foreground" Value="#F4F1EA"/>
+            <Setter Property="CaretBrush" Value="#F4F1EA"/>
+            <Setter Property="SelectionBrush" Value="#FF5B1F"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="MaxLength" Value="80"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border CornerRadius="10" Background="#222225" Padding="12,8">
+                            <ScrollViewer x:Name="PART_ContentHost" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Slim scrollbar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="MinWidth" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border CornerRadius="4" Background="#303034" Margin="1,2"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="Shell" Opacity="0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="224"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Background="#09090A" BorderBrush="#1A1A1C" BorderThickness="0,0,1,0">
+            <DockPanel Margin="14,22,14,18">
+                <StackPanel x:Name="BrandRow" DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,0,26"/>
+                <StackPanel DockPanel.Dock="Bottom">
+                    <Button x:Name="QuitButton" Style="{StaticResource PlainButton}" Content="Quit WindX" HorizontalAlignment="Stretch"/>
+                    <TextBlock x:Name="VersionText" Foreground="#6F6B63" FontSize="12" Margin="8,12,0,0"/>
+                </StackPanel>
+                <StackPanel x:Name="Nav"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Page -->
+        <ScrollViewer x:Name="Scroller" Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled" Focusable="False">
+            <StackPanel x:Name="Host" Margin="36,28,36,36" MaxWidth="760">
+                <StackPanel.RenderTransform>
+                    <TranslateTransform x:Name="HostShift"/>
+                </StackPanel.RenderTransform>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

@@ -1,0 +1,8 @@
+﻿bin/
+obj/
+release/
+site/download/
+marketing/node_modules/
+marketing/*.mp4
+*.user
+.vs/
