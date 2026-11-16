@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WindX — a Dynamic Island for Windows</title>
+<meta name="description" content="WindX puts a living island at the top of your Windows screen: music, weather, calendar, timer, reminders and 24 animated effects. Free, open source, about 40 MB of memory, no tracking.">
+<meta property="og:title" content="WindX — a Dynamic Island for Windows">
+<meta property="og:description" content="Music, weather, calendar, timer and 24 living effects in one island. Free and open source.">
+<meta property="og:image" content="https://getwindx.netlify.app/assets/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="island.css">
+<style>
+  :root {
+    --bg: #000; --panel: #0d0d0e; --panel2: #161617; --line: #232325;
+    --text: #f5f5f7; --dim: #86868b; --ember: #ff5b1f; --ember2: #ffb38a;
+    --hot: linear-gradient(90deg, var(--ember2), var(--ember));
+    --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; -webkit-font-smoothing: antialiased;
+    font: 17px/1.5 -apple-system, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif; letter-spacing: -0.01em; }
+  a { color: inherit; text-decoration: none; }
+  h1, h2, h3 { margin: 0; font-family: -apple-system, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Inter, system-ui, sans-serif; font-weight: 700; letter-spacing: -0.035em; line-height: 1.04; text-wrap: balance; }
+  .wrap { width: min(1080px, 100% - 40px); margin: 0 auto; }
+  .hot { background: var(--hot); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .dim { color: var(--dim); }
+
+  /* nav */
+  header { position: fixed; inset: 0 0 auto; z-index: 50; height: 52px; backdrop-filter: saturate(180%) blur(20px); background: rgba(0,0,0,.72); border-bottom: 1px solid rgba(255,255,255,.06); }
+  nav { height: 52px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+  .brand svg { width: 26px; height: 26px; }
+  .links { display: flex; gap: 28px; font-size: 13.5px; color: #c7c7cc; }
+  .links a:hover { color: #fff; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; font-weight: 600; transition: transform .3s var(--ease), background .3s, box-shadow .3s; }
+  .pill.sm { padding: 6px 14px; font-size: 13px; background: var(--ember); color: #fff; }
+  .pill.lg { padding: 15px 28px; font-size: 17px; background: var(--ember); color: #fff; box-shadow: 0 18px 50px -18px rgba(255,91,31,.75); }
+  .pill.lg:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 24px 60px -18px rgba(255,91,31,.95); }
+  .pill.ghost { padding: 15px 26px; font-size: 17px; color: var(--ember); }
+  .pill.ghost:hover { text-decoration: underline; }
+
+  /* hero */
+  .hero { padding: 150px 0 40px; text-align: center; position: relative; }
+  .hero::before { content: ""; position: absolute; left: 50%; top: 160px; width: 900px; height: 600px; transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgba(255,91,31,.22), transparent); filter: blur(30px); pointer-events: none; }
+  .eyebrow { font-size: 21px; font-weight: 600; color: var(--ember); letter-spacing: -0.01em; }
+  .hero h1 { font-size: clamp(52px, 9vw, 112px); margin-top: 10px; }
+  .hero p { font-size: clamp(19px, 2.2vw, 24px); color: #a1a1a6; max-width: 34ch; margin: 22px auto 0; line-height: 1.35; font-weight: 500; }
+  .cta { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 34px; }
+  .fine { font-size: 13px; color: var(--dim); margin-top: 14px; }
+  .stage { position: relative; margin: 70px auto 0; width: min(1080px, 100%); aspect-ratio: 16/8.4; border-radius: 34px; overflow: hidden;
+    background: radial-gradient(90% 120% at 50% -10%, #2b2420 0%, #0b0a0a 55%, #000 100%); border: 1px solid #1c1c1e;
+    box-shadow: 0 80px 160px -60px rgba(255,91,31,.35); }
+  .stage .island-slot { position: absolute; left: 50%; top: 5.5%; transform: translateX(-50%) scale(var(--s, 1.6)); transform-origin: top center; }
+  .stage .dock { position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%); display: flex; gap: 12px; padding: 10px 16px; border-radius: 18px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); backdrop-filter: blur(10px); }
+  .stage .dock i { width: 26px; height: 26px; border-radius: 8px; background: rgba(255,255,255,.14); }
+  .stage .dock i:first-child { background: var(--ember); }
+  .cap { position: absolute; inset: auto 0 18% 0; font-size: clamp(17px, 2.2vw, 26px); font-weight: 600; letter-spacing: -0.02em; }
+  .cap span { position: absolute; left: 0; right: 0; opacity: 0; }
+
+  section { padding: 140px 0; }
+  .statement { text-align: center; }
+  .statement h2 { font-size: clamp(44px, 7vw, 92px); }
+  .statement p { font-size: clamp(19px, 2.2vw, 24px); color: #a1a1a6; max-width: 40ch; margin: 22px auto 0; font-weight: 500; line-height: 1.35; }
+  .kicker { font-size: 17px; font-weight: 600; color: var(--ember); margin-bottom: 12px; }
+  h2.big { font-size: clamp(40px, 6vw, 72px); }
+  .lead { font-size: clamp(18px, 2vw, 22px); color: #a1a1a6; max-width: 46ch; margin-top: 18px; font-weight: 500; line-height: 1.4; }
+
+  /* reveal */
+  .rv { opacity: 0; transform: translateY(40px) scale(.98); transition: opacity 1s var(--ease), transform 1.2s var(--ease); transition-delay: var(--d, 0s); }
+  .rv.in { opacity: 1; transform: none; }
+
+  /* effects showcase */
+  .shots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 64px; }
+  .shot { position: relative; border-radius: 30px; background: var(--panel); border: 1px solid var(--line); padding: 40px 28px 30px; overflow: hidden; text-align: center; }
+  .shot.wide { grid-column: span 2; padding: 56px 28px 40px; }
+  .shot img { width: min(100%, 560px); height: auto; display: block; margin: 0 auto; filter: drop-shadow(0 30px 50px rgba(0,0,0,.6)); transition: transform 1.2s var(--ease); }
+  .shot:hover img { transform: scale(1.03); }
+  .shot h3 { font-size: 28px; margin-top: 26px; }
+  .shot p { color: var(--dim); margin: 6px 0 0; font-size: 16px; }
+  .shot .glow { position: absolute; inset: auto 10% -40% 10%; height: 70%; border-radius: 50%; filter: blur(60px); opacity: .45; pointer-events: none; }
+
+  /* numbers */
+  .nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .num { padding: 54px 18px; text-align: center; }
+  .num + .num { border-left: 1px solid var(--line); }
+  .num b { display: block; font-size: clamp(40px, 5vw, 64px); letter-spacing: -0.04em; font-family: -apple-system, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", sans-serif; }
+  .num span { color: var(--dim); font-size: 15px; }
+
+  /* split feature */
+  .split { display: grid; grid-template-columns: 1fr 1.15fr; gap: 64px; align-items: center; }
+  .split.flip { grid-template-columns: 1.15fr 1fr; }
+  .split.flip > :first-child { order: 2; }
+  .frame { border-radius: 30px; background: var(--panel); border: 1px solid var(--line); padding: 34px 24px; text-align: center; }
+  .frame img { width: 100%; height: auto; display: block; border-radius: 14px; }
+
+  /* tiles */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 60px; }
+  .tile { border-radius: 26px; background: var(--panel); border: 1px solid var(--line); padding: 30px 28px; transition: transform .5s var(--ease), border-color .5s; }
+  .tile:hover { transform: translateY(-6px); border-color: #333; }
+  .tile svg { width: 30px; height: 30px; stroke: var(--ember); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tile h3 { font-size: 22px; margin-top: 18px; letter-spacing: -0.02em; }
+  .tile p { color: var(--dim); font-size: 15.5px; margin: 8px 0 0; line-height: 1.45; }
+
+  /* film */
+  .film { display: grid; grid-template-columns: 360px 1fr; gap: 70px; align-items: center; }
+  .phone { width: 360px; aspect-ratio: 9/16; border-radius: 46px; padding: 10px; background: linear-gradient(160deg, #2c2c2e, #0a0a0b); box-shadow: 0 60px 120px -50px rgba(255,91,31,.55); }
+  .phone video { width: 100%; height: 100%; object-fit: cover; border-radius: 37px; display: block; background: #000; }
+
+  /* install */
+  .install { border-radius: 36px; background: radial-gradient(80% 120% at 50% 0%, rgba(255,91,31,.18), transparent 60%), var(--panel); border: 1px solid var(--line); padding: 72px 56px; text-align: center; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 56px; text-align: left; counter-reset: s; }
+  .step { border-radius: 22px; background: var(--panel2); border: 1px solid var(--line); padding: 24px; position: relative; }
+  .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--ember); color: #fff; font-weight: 700; font-size: 15px; }
+  .step h3 { font-size: 19px; margin-top: 16px; letter-spacing: -0.02em; }
+  .step p { color: var(--dim); font-size: 14.5px; margin: 6px 0 0; line-height: 1.45; }
+  .step kbd { font-family: inherit; font-size: 13px; background: #2a2a2c; border: 1px solid #3a3a3c; border-radius: 6px; padding: 1px 6px; color: #e5e5ea; white-space: nowrap; }
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; text-align: left; }
+  .note { border-radius: 18px; border: 1px solid var(--line); padding: 18px 20px; font-size: 14.5px; color: #b0b0b5; line-height: 1.5; }
+  .note b { color: var(--text); }
+  .sums { margin-top: 16px; text-align: left; font: 12.5px/1.7 "Cascadia Mono", Consolas, monospace; color: var(--dim); background: #000; border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; overflow-x: auto; white-space: nowrap; }
+  .sums b { color: #d1d1d6; font-weight: 500; }
+
+  /* privacy */
+  .checks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px 40px; margin-top: 54px; }
+  .check b { display: block; font-size: 19px; letter-spacing: -0.02em; margin-top: 10px; }
+  .check span { color: var(--dim); font-size: 15px; line-height: 1.45; display: block; margin-top: 4px; }
+  .check i { display: block; width: 26px; height: 2px; background: var(--ember); }
+
+  footer { border-top: 1px solid var(--line); padding: 36px 0 60px; color: var(--dim); font-size: 12.5px; position: relative; overflow: hidden; }
+  .foot { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; position: relative; }
+  .foot a:hover { color: var(--text); }
+  .wm { font-size: min(26vw, 320px); font-weight: 800; letter-spacing: -0.06em; line-height: .8; text-align: center; margin-top: 50px; color: transparent;
+    -webkit-text-stroke: 1px #1e1e20; user-select: none; font-family: -apple-system, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", sans-serif; }
+
+  .logo path { stroke-dasharray: 100; stroke-dashoffset: 100; animation: draw 1.6s var(--ease) forwards; }
+  .logo path:nth-child(2) { animation-delay: .2s; } .logo path:nth-child(3) { animation-delay: .4s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  @media (max-width: 860px) {
+    .links { display: none; }
+    section { padding: 96px 0; }
+    .shots, .tiles, .steps, .notes, .checks { grid-template-columns: 1fr; }
+    .shot.wide { grid-column: auto; }
+    .nums { grid-template-columns: 1fr 1fr; } .num:nth-child(3) { border-left: 0; } .num:nth-child(n+3) { border-top: 1px solid var(--line); }
+    .split, .split.flip, .film { grid-template-columns: 1fr; gap: 40px; } .split.flip > :first-child { order: 0; }
+    .phone { width: min(340px, 100%); margin: 0 auto; }
+    .stage { aspect-ratio: 4/4.4; border-radius: 24px; } .stage .island-slot { --s: .82; }
+    .install { padding: 48px 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .rv { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <nav class="wrap">
+    <a class="brand" href="#top" aria-label="WindX home">
+      <svg class="logo" viewBox="0 0 64 64" fill="none" stroke-width="5.4" stroke-linecap="round" aria-hidden="true">
+        <path pathLength="100" stroke="#f4f1ea" d="M10 23H36A8 8 0 1 0 28 15"/><path pathLength="100" stroke="#ff5b1f" d="M5 33H47A9 9 0 1 1 38 42"/><path pathLength="100" stroke="#f4f1ea" d="M15 43H25A6 6 0 1 1 19 49"/>
+      </svg>
+      <span>Wind<span style="color:var(--ember)">X</span></span>
+    </a>
+    <div class="links"><a href="#effects">Effects</a><a href="#features">Features</a><a href="#film">Film</a><a href="#install">Install</a><a href="#privacy">Privacy</a></div>
+    <a class="pill sm" href="#install">Download</a>
+  </nav>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <div class="eyebrow rv">WindX for Windows</div>
+    <h1 class="rv" style="--d:.08s">Your screen&rsquo;s<br>new <span class="hot">top.</span></h1>
+    <p class="rv" style="--d:.16s">A living island that shows your music, your day and your PC &mdash; then gets out of the way.</p>
+    <div class="cta rv" style="--d:.24s">
+      <a class="pill lg" href="#install">Download free</a>
+      <a class="pill ghost" href="#film">Watch the film &rsaquo;</a>
+    </div>
+    <div class="fine rv" style="--d:.3s">Windows 10 &amp; 11 &middot; Free &amp; open source &middot; No account</div>
+
+    <div class="stage rv" style="--d:.2s" aria-label="Animated demonstration of the WindX island">
+      <div class="island-slot" id="heroIsland"></div>
+      <div class="cap" id="heroCap" aria-hidden="true">
+        <span>Lives quietly at the top of your screen.</span>
+        <span>Your music, with a live visualizer.</span>
+        <span>Morphs for volume, charging and new tracks.</span>
+        <span>Play, skip and seek in one click.</span>
+        <span>Your calendar and the weather.</span>
+        <span>Your PC&rsquo;s vitals, at a glance.</span>
+      </div>
+      <div class="dock" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+  </div>
+
+  <section class="statement">
+    <div class="wrap">
+      <h2 class="rv">Not a widget.<br><span class="hot">An element.</span></h2>
+      <p class="rv" style="--d:.1s">Fire that leaps with your music. Water that curls into waves. A galaxy turning slowly behind the clock. Twenty-four living effects, drawn live &mdash; not videos.</p>
+    </div>
+  </section>
+
+  <section id="effects" style="padding-top:0">
+    <div class="wrap">
+      <div class="shots">
+        <div class="shot wide rv"><div class="glow" style="background:#ff4a12"></div><img src="shots/fire-home.png" alt="WindX island in the Ember theme with the Fire effect" loading="lazy"><h3>Fire.</h3><p>Five layers of flame and rising sparks. Louder music, taller fire.</p></div>
+        <div class="shot rv"><div class="glow" style="background:#1d7fd6"></div><img src="shots/water-home.png" alt="Water effect" loading="lazy"><h3>Water.</h3><p>Woodblock waves with foam that curls off every crest.</p></div>
+        <div class="shot rv" style="--d:.08s"><div class="glow" style="background:#7c4dff"></div><img src="shots/galaxy-home.png" alt="Galaxy effect" loading="lazy"><h3>Galaxy.</h3><p>A spiral of stars, slowly turning.</p></div>
+        <div class="shot rv"><div class="glow" style="background:#c6ff3d"></div><img src="shots/thunder-home.png" alt="Thunder effect" loading="lazy"><h3>Thunder.</h3><p>Lightning that strikes faster when the beat drops.</p></div>
+        <div class="shot rv" style="--d:.08s"><div class="glow" style="background:#ff8fa9"></div><img src="shots/sakura-calendar.png" alt="Sakura effect on the calendar page" loading="lazy"><h3>Sakura.</h3><p>Petals tumbling past a full month view.</p></div>
+      </div>
+      <p class="lead rv" style="margin:40px auto 0;text-align:center">Plus Wind, Rain, Snow, Ribbons, Aurora, Fireflies, Matrix, Synthwave, Meteors, Cats, Race and more.</p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="nums">
+      <div class="num rv"><b class="hot">24</b><span>living effects</span></div>
+      <div class="num rv" style="--d:.06s"><b class="hot">26</b><span>themes</span></div>
+      <div class="num rv" style="--d:.12s"><b class="hot">~40&nbsp;MB</b><span>of memory</span></div>
+      <div class="num rv" style="--d:.18s"><b class="hot">0</b><span>trackers</span></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="wrap split">
+      <div>
+        <div class="kicker rv">Race mode</div>
+        <h2 class="big rv">Lights out.</h2>
+        <p class="lead rv">A detailed single-seater holds the racing line inside your island &mdash; wings, halo, spinning wheels, sparks off the floor. Pick from ten team colour schemes.</p>
+      </div>
+      <div class="frame rv" style="--d:.1s"><img src="shots/race-home.png" alt="Race effect" loading="lazy"><img src="shots/race-compact.png" alt="" style="margin-top:22px" loading="lazy"></div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap split flip">
+      <div>
+        <div class="kicker rv">Focus</div>
+        <h2 class="big rv">Time, kept.</h2>
+        <p class="lead rv">A timer and a full Pomodoro cycle live inside the island. While it runs, the pill counts down. Set reminders for any time of day and the island turns into a banner and chimes.</p>
+      </div>
+      <div class="frame rv" style="--d:.1s"><img src="shots/ribbons-focus.png" alt="Timer and Pomodoro page" loading="lazy"></div>
+    </div>
+  </section>
+
+  <section id="features" style="padding-top:0">
+    <div class="wrap">
+      <div class="kicker rv" style="text-align:center">Everything else</div>
+      <h2 class="big rv" style="text-align:center">Small island.<br>Big list.</h2>
+      <div class="tiles">
+        <div class="tile rv"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg><h3>Now playing</h3><p>Spotify, YouTube, any player. Album art, real visualizer, seek bar, tinted by the cover.</p></div>
+        <div class="tile rv" style="--d:.06s"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><h3>Calendar &amp; weather</h3><p>A month view and a three-day forecast. Weather stays off until you add a city.</p></div>
+        <div class="tile rv" style="--d:.12s"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 13h2l2-4 2 7 2-3h2"/></svg><h3>System &amp; game overlay</h3><p>CPU, memory, disk and battery rings &mdash; and a tiny CPU/RAM readout over fullscreen games.</p></div>
+        <div class="tile rv"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><h3>Quick controls</h3><p>Brightness, volume, Wi-Fi, Bluetooth, mute and screenshot. Hide any you don&rsquo;t use.</p></div>
+        <div class="tile rv" style="--d:.06s"><svg viewBox="0 0 24 24"><path d="M12 3v4"/><rect x="6" y="7" width="12" height="13" rx="2"/><path d="M9 12h6M9 15.5h4"/></svg><h3>Hanging note</h3><p>A quote or your own reminder on a tag that swings when you drag it. Cardboard, sticky, painted.</p></div>
+        <div class="tile rv" style="--d:.12s"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 010 6M19 6.5a7.5 7.5 0 010 11"/></svg><h3>Sounds &amp; music</h3><p>Soft touch sounds, and a theme track of your own that plays while the island is open.</p></div>
+        <div class="tile rv"><svg viewBox="0 0 24 24"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><path d="M4 4l16 16"/></svg><h3>Auto-hide</h3><p>Tuck it away after a few seconds. Touch the top of the screen and it&rsquo;s back.</p></div>
+        <div class="tile rv" style="--d:.06s"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg><h3>Your picture</h3><p>Put any photo inside the island with a slow camera drift and effects on top.</p></div>
+        <div class="tile rv" style="--d:.12s"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18M3 12h18"/></svg><h3>Light on your PC</h3><p>Draws nothing when nothing changes. About 40&nbsp;MB of memory and a fraction of a percent of CPU at rest.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap split">
+      <div>
+        <div class="kicker rv">Settings</div>
+        <h2 class="big rv">Make it yours.</h2>
+        <p class="lead rv">Twenty-six themes &mdash; classic, gradient and team colours &mdash; three sizes, transparency, position, and a switch for every single control. Every change applies live.</p>
+      </div>
+      <div class="frame rv" style="--d:.1s;padding:12px"><img src="shots/settings.png" alt="WindX settings window" loading="lazy"></div>
+    </div>
+  </section>
+
+  <section id="film" style="padding-top:0">
+    <div class="wrap film">
+      <div class="phone rv"><video src="assets/windx-reel.mp4" poster="assets/reel-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
+      <div>
+        <div class="kicker rv">The film</div>
+        <h2 class="big rv">Twenty-five seconds.</h2>
+        <p class="lead rv">Everything WindX does, set to motion. Free to share.</p>
+        <div class="cta rv" style="justify-content:flex-start"><a class="pill ghost" style="padding-left:0" href="assets/windx-reel.mp4" download>Download the film &rsaquo;</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" style="padding-top:0">
+    <div class="wrap">
+      <div class="install rv">
+        <div class="kicker">Download</div>
+        <h2 class="big">Get WindX. Free.</h2>
+        <p class="lead" style="margin-left:auto;margin-right:auto">Ready in under a minute. No installer, no admin rights, no account.</p>
+        <div class="cta">
+          <a class="pill lg" href="download/WindX-1.0.0-win-x64.zip" download>Download WindX 1.0 <span style="opacity:.75;font-weight:500">67 MB</span></a>
+          <a class="pill ghost" href="download/WindX-1.0.0-win-x64-lite.zip" download>Lite version, 7 MB &rsaquo;</a>
+        </div>
+        <div class="fine">Windows 10 (version 2004 or later) or Windows 11, 64-bit.</div>
+
+        <div class="steps">
+          <div class="step"><h3>Download</h3><p>Press <b>Download WindX 1.0</b>. Most people want this one &mdash; it needs nothing else.</p></div>
+          <div class="step"><h3>Unzip</h3><p>Right-click the zip in your Downloads folder and choose <kbd>Extract All&hellip;</kbd> &rarr; <kbd>Extract</kbd>.</p></div>
+          <div class="step"><h3>Run</h3><p>Double-click <b>WindX.exe</b>. If Windows says &ldquo;Windows protected your PC&rdquo;, click <kbd>More info</kbd> &rarr; <kbd>Run anyway</kbd>.</p></div>
+          <div class="step"><h3>Make it yours</h3><p>Click the island to open it. Right-click it for Settings, and turn on <b>Start with Windows</b>.</p></div>
+        </div>
+
+        <div class="notes">
+          <div class="note"><b>Why the SmartScreen warning?</b> WindX isn&rsquo;t code-signed yet (that costs money each year). It&rsquo;s open source, and you can check your download against the SHA-256 below.</div>
+          <div class="note"><b>Lite version</b> is just 7&nbsp;MB but needs Microsoft&rsquo;s free <a href="https://dotnet.microsoft.com/download/dotnet/10.0" style="color:var(--ember)" rel="noopener">.NET 10 Desktop Runtime (x64)</a> installed first.</div>
+          <div class="note"><b>Uninstall:</b> right-click the island &rarr; Settings &rarr; Quit WindX, then delete the folder. To forget your settings too, delete <code>%AppData%\WindX</code>.</div>
+          <div class="note"><b>Tips:</b> scroll on the island to change volume. Drag the hanging note and let go. Open the stopwatch tab for the timer and Pomodoro.</div>
+        </div>
+        <div class="sums">SHA-256<br><b>WindX-1.0.0-win-x64.zip</b>&nbsp;&nbsp;d022366166414d00401b5b00add7f25e3cd4122b850685200859b532eebe1a1c<br><b>WindX-1.0.0-win-x64-lite.zip</b>&nbsp;&nbsp;c3b48313f39d5468d9ecff46c4c0b4122489637c9a743d96e48d5a9abf9e7168</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy" style="padding-top:0">
+    <div class="wrap">
+      <div class="kicker rv">Privacy</div>
+      <h2 class="big rv">It minds its<br>own business.</h2>
+      <div class="checks">
+        <div class="check rv"><i></i><b>No tracking. Ever.</b><span>No analytics, telemetry, ads or account. WindX never phones home.</span></div>
+        <div class="check rv" style="--d:.06s"><i></i><b>One optional request</b><span>Only the weather forecast touches the internet &mdash; and only after you type a city.</span></div>
+        <div class="check rv" style="--d:.12s"><i></i><b>No admin rights</b><span>Runs as a normal app and changes only what you press.</span></div>
+        <div class="check rv"><i></i><b>Open source</b><span>MIT licensed. Read every line, or build it yourself.</span></div>
+        <div class="check rv" style="--d:.06s"><i></i><b>Stays on your PC</b><span>Settings, reminders and your pictures never leave your computer.</span></div>
+        <div class="check rv" style="--d:.12s"><i></i><b>Verifiable</b><span>Published checksums for every download. <a href="privacy.html" style="color:var(--ember)">Full policy &rsaquo;</a></span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>&copy; 2026 WindX &middot; MIT licence &middot; Not affiliated with Microsoft, Apple, Formula 1 or any team.</div>
+    <div style="display:flex;gap:22px"><a href="privacy.html">Privacy</a><a href="https://github.com/be24b034-hue/windx">Source code</a><a href="#install">Download</a></div>
+  </div>
+  <div class="wm" aria-hidden="true">WindX</div>
+</footer>
+
+<script src="island.js"></script>
+<script>
+(function () {
+  "use strict";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isl = WindXIsland.create(document.getElementById("heroIsland"), "Midnight");
+  const tl = WindXIsland.loop(isl);
+  const T = 17, times = [[0.2, 1.6], [1.9, 3.8], [4.1, 5.8], [6.2, 9.0], [9.5, 12.2], [12.7, 15.1]];
+  document.querySelectorAll("#heroCap span").forEach((c, i) => {
+    const [a, b] = times[i];
+    c.animate([
+      { offset: 0, opacity: 0, transform: "translateY(12px)" }, { offset: a / T, opacity: 0, transform: "translateY(12px)" },
+      { offset: (a + .45) / T, opacity: 1, transform: "none" }, { offset: b / T, opacity: 1, transform: "none" },
+      { offset: (b + .3) / T, opacity: 0, transform: "translateY(-8px)" }, { offset: 1, opacity: 0, transform: "translateY(-8px)" },
+    ], { duration: T * 1000, iterations: Infinity, easing: "linear" });
+  });
+  if (reduce) { tl.seek(7); document.getAnimations().forEach((a) => a.pause()); }
+
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .12, rootMargin: "0px 0px -6% 0px" });
+  document.querySelectorAll(".rv").forEach((el) => io.observe(el));
+})();
+</script>
+</body>
+</html>
