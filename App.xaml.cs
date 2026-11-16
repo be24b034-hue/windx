@@ -9,9 +9,9 @@ namespace WindX;
 public static class Links
 {
     public const string Version = "1.0.0";
-    public const string Site = "https://getwindx.netlify.app/";
+    public const string Site = "https://be24b034-hue.github.io/windx/";
     public const string Repo = "https://github.com/be24b034-hue/windx";
-    public const string Privacy = "https://getwindx.netlify.app/privacy.html";
+    public const string Privacy = "https://be24b034-hue.github.io/windx/privacy.html";
 
     /// <summary>Opens one of the fixed links above in the default browser. Nothing else can be opened through here.</summary>
     public static void Open(string url)
