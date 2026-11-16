@@ -163,7 +163,7 @@ public partial class MainWindow : Window
         SystemPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
         FocusPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
         NotesPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
-        PinNote.MouseLeftButtonUp += (_, e) => { e.Handled = true; SetExpanded(true); SelectPage(4); ApplyState(); };
+        BuildStickies();
         Island.SizeChanged += (_, _) => PlacePin();
         NotesBox.Text = S.Notes;
         NotesHint.Visibility = S.Notes.Length > 0 ? Visibility.Collapsed : Visibility.Visible;
@@ -451,7 +451,7 @@ public partial class MainWindow : Window
         ShowNote();
 
         AnimateIsland(w, h, r);
-        if (App.SnapshotDir == null) FitHeight(8 + h * S.Scale + 70 + (S.ShowNote && !_expanded ? 200 : 0));
+        if (App.SnapshotDir == null) FitHeight(8 + h * S.Scale + 70 + (S.ShowNote && !_expanded ? 200 : 0) + (S.PinNote && !_expanded ? 40 : 0));
         UpdateGlow();
         EnsureFrameTimer();
         EnsureFx();
@@ -896,40 +896,106 @@ public partial class MainWindow : Window
         NoteSwing.BeginAnimation(RotateTransform.AngleProperty, sway);
     }
 
-    // ------------------------------------------------------------------ pinned note
+    // ------------------------------------------------------------------ sticky notes
 
+    private readonly Border[] _stickies = new Border[4];
+    private readonly TextBlock[] _stickyText = new TextBlock[4];
+    private readonly RotateTransform[] _stickyTilt = new RotateTransform[4];
+    private readonly bool[] _stickyOn = new bool[4];
     private bool _pinShown;
+    private static readonly double[] StickyAngle = { -5, 4, 5, -4 };
 
-    private void UpdatePin()
+    private static (string Paper, string Ink) StickyColors(string name) => name switch
     {
-        string first = (S.Notes ?? "").Trim();
-        int nl = first.IndexOfAny(new[] { '\r', '\n' });
-        if (nl > 0) first = first[..nl];
-        if (first.Length > 60) first = first[..60] + "…";
-        PinText.Text = first;
-        bool on = S.PinNote && first.Length > 0 && !_expanded && !_intro && !_dormant && !_hidden && !_overlay;
-        if (on == _pinShown) return;
-        _pinShown = on;
-        PinNote.IsHitTestVisible = on;
-        Animate(PinNote, OpacityProperty, on ? 1 : 0, on ? 380 : 140, _smooth);
-        if (on)
+        "Pink" => ("#FFB3CF", "#4A1030"),
+        "Blue" => ("#A8D8FF", "#0B2A4A"),
+        "Green" => ("#B8F0A0", "#163A0C"),
+        "Orange" => ("#FFC48A", "#4A2200"),
+        _ => ("#FFE566", "#3A3300"),
+    };
+
+    private void BuildStickies()
+    {
+        PinNote.Visibility = Visibility.Collapsed;   // replaced by the four below
+        int at = Root.Children.IndexOf(Island);
+        for (int i = 0; i < 4; i++)
         {
-            PlacePin();
-            // Slaps on with a little wobble.
-            var wob = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(700) };
-            foreach (var (a, p) in new[] { (-14.0, 0.0), (2.0, 0.35), (-7.0, 0.6), (-4.0, 0.8), (-5.0, 1.0) })
-                wob.KeyFrames.Add(new EasingDoubleKeyFrame(a, KeyTime.FromPercent(p), new SineEase()));
-            PinTilt.BeginAnimation(RotateTransform.AngleProperty, wob);
+            var text = new TextBlock { FontFamily = new FontFamily("Ink Free, Segoe Print, Segoe UI"), FontSize = 13, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, MaxHeight = 54, TextTrimming = TextTrimming.CharacterEllipsis };
+            var tape = new Border { Width = 34, Height = 9, Background = new SolidColorBrush(Color.FromArgb(0x55, 255, 255, 255)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -12, 0, 0), RenderTransform = new RotateTransform(i % 2 == 0 ? 8 : -10) };
+            var inner = new Grid();
+            inner.Children.Add(tape);
+            inner.Children.Add(text);
+            var tilt = new RotateTransform(StickyAngle[i]);
+            var card = new Border
+            {
+                Width = 128, MinHeight = 34, CornerRadius = new CornerRadius(3),
+                // Extra room on the side that tucks under the island, so no text hides behind it.
+                Padding = i < 2 ? new Thickness(10, 7, 22, 8) : new Thickness(22, 7, 10, 8),
+                HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Opacity = 0, IsHitTestVisible = false, Cursor = Cursors.Hand,
+                RenderTransformOrigin = new Point(0.5, 0.1), RenderTransform = tilt, Child = inner,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 8, ShadowDepth = 2, Direction = 290, Opacity = 0.35 },
+            };
+            card.MouseLeftButtonUp += (_, e) => { e.Handled = true; OpenSettings(); _settingsWin?.Go(8); };
+            _stickies[i] = card; _stickyText[i] = text; _stickyTilt[i] = tilt;
+            Root.Children.Insert(at, card);
         }
     }
 
-    /// <summary>Stuck onto the island's left end, overlapping it a little.</summary>
-    private void PlacePin()
+    private void UpdatePin()
     {
-        double left = Width / 2 - Island.ActualWidth * S.Scale / 2 - PinNote.Width + 18;
-        PinNote.Margin = new Thickness(Math.Max(4, left), 10, 0, 0);
+        var items = S.Stickies.Where(s => s.Text.Length > 0).Take(4).ToList();
+        if (items.Count == 0)
+        {
+            // No stickies written yet: fall back to the first line of the Notes tab.
+            string first = (S.Notes ?? "").Trim();
+            int nl = first.IndexOfAny(new[] { '\r', '\n' });
+            if (nl > 0) first = first[..nl];
+            if (first.Length > 60) first = first[..60] + "…";
+            if (first.Length > 0) items.Add(new StickyItem { Text = first });
+        }
+        bool show = S.PinNote && !_expanded && !_intro && !_dormant && !_hidden && !_overlay;
+        _pinShown = false;
+        for (int i = 0; i < 4; i++)
+        {
+            bool on = show && i < items.Count;
+            if (on)
+            {
+                var (paper, ink) = StickyColors(items[i].Color);
+                _stickies[i].Background = new SolidColorBrush(Theme.C(paper));
+                _stickyText[i].Foreground = new SolidColorBrush(Theme.C(ink));
+                _stickyText[i].Text = items[i].Text;
+                _pinShown = true;
+            }
+            if (on == _stickyOn[i]) continue;
+            _stickyOn[i] = on;
+            _stickies[i].IsHitTestVisible = on;
+            Animate(_stickies[i], OpacityProperty, on ? 1 : 0, on ? 380 : 140, _smooth);
+            if (on)
+            {
+                // Slaps on with a little wobble, one after another.
+                double rest = StickyAngle[i];
+                var wob = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(700), BeginTime = TimeSpan.FromMilliseconds(i * 90) };
+                foreach (var (a, p) in new[] { (rest - 10, 0.0), (rest + 6, 0.35), (rest - 3, 0.6), (rest + 1, 0.8), (rest, 1.0) })
+                    wob.KeyFrames.Add(new EasingDoubleKeyFrame(a, KeyTime.FromPercent(p), new SineEase()));
+                _stickyTilt[i].BeginAnimation(RotateTransform.AngleProperty, wob);
+            }
+        }
+        PlacePin();
     }
 
+    /// <summary>First two stick to the island's left end, the next two to its right end.</summary>
+    private void PlacePin()
+    {
+        if (_stickies[0] == null) return;
+        double half = Island.ActualWidth * S.Scale / 2, w = _stickies[0].Width;
+        for (int i = 0; i < 4; i++)
+        {
+            double x = i < 2
+                ? Width / 2 - half - w + 16 - i * (w - 8)
+                : Width / 2 + half - 16 + (i - 2) * (w - 8);
+            _stickies[i].Margin = new Thickness(Math.Clamp(x, 2, Width - w - 2), 10 + (i % 2) * 4, 0, 0);
+        }
+    }
     // ------------------------------------------------------------------ click-through
 
     /// <summary>
@@ -940,7 +1006,7 @@ public partial class MainWindow : Window
     {
         if (_hwnd == IntPtr.Zero || !GetCursorPos(out POINT p)) return;
         bool over = Mouse.Captured != null
-            || (!_hidden && (Over(Island, p, 3) || (_noteShown && Over(NoteHost, p, 0)) || (_pinShown && Over(PinNote, p, 2)) || (_dormant && Over(WakeZone, p, 0))));
+            || (!_hidden && (Over(Island, p, 3) || (_noteShown && Over(NoteHost, p, 0)) || (_pinShown && _stickies.Any(s => s.Opacity > 0.5 && Over(s, p, 2))) || (_dormant && Over(WakeZone, p, 0))));
         if (over != _passThrough) return;
         _passThrough = !over;
         long ex = GetWindowLongPtr(_hwnd, GWL_EXSTYLE).ToInt64();
@@ -1633,7 +1699,7 @@ public partial class MainWindow : Window
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_EFFECT") is { Length: > 0 } ef) S.Effect = ef;
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_CAR") is { Length: > 0 } car) S.Car = car;
         S.Sounds = false; S.MusicMode = "Off"; S.ShowNote = false; S.BgImage = ""; S.BgText = "";
-        if (Environment.GetEnvironmentVariable("WINDX_SNAP_PIN") is { Length: > 0 } pin) { S.PinNote = true; S.Notes = pin; }
+        if (Environment.GetEnvironmentVariable("WINDX_SNAP_PIN") is { Length: > 0 } pin) { S.PinNote = true; S.Stickies = pin.Split('|').Select((x, i) => new StickyItem { Text = x, Color = new[] { "Yellow", "Pink", "Blue", "Green" }[i % 4] }).ToList(); }
         S.ShowBrightness = S.ShowVolume = S.ShowWifi = S.ShowBluetooth = S.ShowMute = S.ShowSnip = false;
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_NOTE") is { Length: > 0 } ns) { S.ShowNote = true; S.NoteStyle = ns; }
         ApplySettings();

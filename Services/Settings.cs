@@ -64,8 +64,10 @@ public sealed class Settings
 
     public bool ShowNotesTab { get; set; } = true;
     public bool ShowFocusTab { get; set; } = true;
-    /// <summary>A small sticky note stuck on the island showing the start of your note.</summary>
+    /// <summary>Show sticky notes stuck onto the island.</summary>
     public bool PinNote { get; set; }
+    /// <summary>Up to four sticky notes, each with its own colour.</summary>
+    public List<StickyItem> Stickies { get; set; } = new();
 
     /// <summary>Free text from the island's Notes tab.</summary>
     public string Notes { get; set; } = "";
@@ -129,6 +131,15 @@ public sealed class Settings
         Current.BgImageDim = double.IsFinite(Current.BgImageDim) ? Math.Clamp(Current.BgImageDim, 0, 0.8) : 0.45;
         Current.Notes ??= "";
         if (Current.Notes.Length > 4000) Current.Notes = Current.Notes[..4000];
+        Current.Stickies ??= new();
+        Current.Stickies.RemoveAll(s => s == null || string.IsNullOrWhiteSpace(s.Text));
+        if (Current.Stickies.Count > 4) Current.Stickies.RemoveRange(4, Current.Stickies.Count - 4);
+        foreach (var s in Current.Stickies)
+        {
+            s.Text = s.Text.Trim();
+            if (s.Text.Length > 80) s.Text = s.Text[..80];
+            if (s.Color is not ("Yellow" or "Pink" or "Blue" or "Green" or "Orange")) s.Color = "Yellow";
+        }
         Current.Reminders ??= new();
         Current.Reminders.RemoveAll(r => r == null || string.IsNullOrWhiteSpace(r.Text)
             || !TimeSpan.TryParseExact(r.Time, "hh\\:mm", System.Globalization.CultureInfo.InvariantCulture, out _));
@@ -155,6 +166,13 @@ public sealed class Settings
         catch { }
         Changed?.Invoke();
     }
+}
+
+/// <summary>One sticky note on the island.</summary>
+public sealed class StickyItem
+{
+    public string Text { get; set; } = "";
+    public string Color { get; set; } = "Yellow";
 }
 
 /// <summary>One reminder: a time of day (24-hour "HH:mm"), what to say, and whether it repeats daily.</summary>

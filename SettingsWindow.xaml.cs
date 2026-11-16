@@ -45,7 +45,7 @@ public partial class SettingsWindow : Window
         ("\uE945", "Behaviour", "How the island reacts."),
         ("\uE767", "Sound", "Touch sounds and your own theme music."),
         ("\uEA8F", "Reminders", "Pop-ups at the time you choose."),
-        ("\uE70B", "Hanging note", "A quote or a reminder on a tag that swings."),
+        ("\uE70B", "Notes & stickies", "Sticky notes on the island, and a quote or reminder on a hanging tag."),
         ("\uE72E", "Privacy & about", "What WindX does, and doesn't do, with your data."),
     };
 
@@ -344,7 +344,7 @@ public partial class SettingsWindow : Window
 
     // ------------------------------------------------------------------ home
 
-    private void Go(int section)
+    public void Go(int section)
     {
         if (Nav.Children[section] is RadioButton r) r.IsChecked = true;
         Show(section);
@@ -633,8 +633,55 @@ public partial class SettingsWindow : Window
         Host.Children.Add(Card(rows.ToArray()));
     }
 
+    private void BuildStickies()
+    {
+        Host.Children.Add(Heading("Sticky notes", "Up to four notes stuck on the island: two on each side. Leave a box empty to drop that note."));
+        var rows = new List<UIElement> { SwitchRow("Show sticky notes on the island", null, () => S.PinNote, v => S.PinNote = v) };
+        var boxes = new List<(TextBox Box, string[] Color)>();
+        for (int i = 0; i < 4; i++)
+        {
+            var item = i < S.Stickies.Count ? S.Stickies[i] : new StickyItem();
+            var color = new[] { item.Color };
+            var box = new TextBox { Style = (Style)FindResource("Field"), Text = item.Text, MaxLength = 80 };
+            var swatches = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+            foreach (var name in new[] { "Yellow", "Pink", "Blue", "Green", "Orange" })
+            {
+                var dot = new Ellipse { Width = 22, Height = 22, Margin = new Thickness(3, 0, 3, 0), Cursor = Cursors.Hand, Fill = Hex(name switch { "Pink" => "#FFB3CF", "Blue" => "#A8D8FF", "Green" => "#B8F0A0", "Orange" => "#FFC48A", _ => "#FFE566" }),
+                    Stroke = item.Color == name ? Ember : Hex("#2C2C30"), StrokeThickness = item.Color == name ? 2.5 : 1, ToolTip = name };
+                dot.MouseLeftButtonUp += (_, _) =>
+                {
+                    color[0] = name;
+                    foreach (Ellipse e2 in swatches.Children) { bool on = (string)e2.ToolTip == name; e2.Stroke = on ? Ember : Hex("#2C2C30"); e2.StrokeThickness = on ? 2.5 : 1; }
+                };
+                swatches.Children.Add(dot);
+            }
+            var line = new DockPanel { Margin = new Thickness(18, 10, 18, 10) };
+            var num = new TextBlock { Text = (i + 1).ToString(), Foreground = TextDim, FontSize = 14, Width = 22, VerticalAlignment = VerticalAlignment.Center };
+            DockPanel.SetDock(num, Dock.Left);
+            DockPanel.SetDock(swatches, Dock.Right);
+            line.Children.Add(num);
+            line.Children.Add(swatches);
+            line.Children.Add(box);
+            rows.Add(line);
+            boxes.Add((box, color));
+        }
+        var save = PlainButton("Save sticky notes", () =>
+        {
+            S.Stickies = boxes.Where(b => b.Box.Text.Trim().Length > 0).Select(b => new StickyItem { Text = b.Box.Text.Trim(), Color = b.Color[0] }).ToList();
+            if (S.Stickies.Count > 0) S.PinNote = true;
+            Settings.Save();
+            Show(_section, animate: false);
+        });
+        save.HorizontalAlignment = HorizontalAlignment.Left;
+        save.Margin = new Thickness(18, 4, 18, 16);
+        rows.Add(save);
+        Host.Children.Add(Card(rows.ToArray()));
+        Host.Children.Add(Heading("Hanging note"));
+    }
+
     private void BuildNote()
     {
+        BuildStickies();
         Note("A little tag that hangs from the island on a thread. It sways when it appears, then hangs still.");
         var box = new TextBox { Style = (Style)FindResource("Field"), Text = S.NoteText, MaxLength = 140 };
         var save = PlainButton("Save", () =>
