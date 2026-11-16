@@ -14,7 +14,6 @@ using System.Windows.Threading;
 using WindX.Controls;
 using WindX.Services;
 using Microsoft.Win32;
-using WF = System.Windows.Forms;
 
 namespace WindX;
 
@@ -1466,11 +1465,7 @@ public partial class MainWindow : Window
         IDate.Text = now.ToString("dddd, d MMMM");
         IGreeting.Text = now.Hour < 5 ? "GOOD NIGHT" : now.Hour < 12 ? "GOOD MORNING" : now.Hour < 17 ? "GOOD AFTERNOON" : "GOOD EVENING";
 
-        var ps = WF.SystemInformation.PowerStatus;
-        bool hasBattery = ps.BatteryChargeStatus != WF.BatteryChargeStatus.NoSystemBattery
-                          && ps.BatteryLifePercent is >= 0 and <= 1;
-        bool plugged = ps.PowerLineStatus == WF.PowerLineStatus.Online;
-        double level = hasBattery ? ps.BatteryLifePercent : 1;
+        var (hasBattery, plugged, level) = Power.Read();
         string pct = (int)Math.Round(level * 100) + "%";
         _batteryLevel = level;
 
