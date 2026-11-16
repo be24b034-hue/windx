@@ -158,6 +158,8 @@ public sealed class Settings
 
     public static void Save()
     {
+        // Test/screenshot runs change settings in memory only; never write them to the user's file.
+        if (WindX.App.SnapshotDir != null) { Changed?.Invoke(); return; }
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);

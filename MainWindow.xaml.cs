@@ -185,7 +185,7 @@ public partial class MainWindow : Window
         Deactivated += (_, _) =>
         {
             AllowTyping(false);
-            if (_expanded && !Island.IsMouseOver) SetExpanded(false);
+            if (App.SnapshotDir == null && _expanded && !Island.IsMouseOver) SetExpanded(false);
         };
         TabBar.MouseLeftButtonUp += (_, e) => e.Handled = true;
 
@@ -202,7 +202,7 @@ public partial class MainWindow : Window
         {
             _collapseTimer.Stop();
             if (Mouse.Captured != null || NotesBox.IsKeyboardFocusWithin) { _collapseTimer.Start(); return; } // dragging a slider or typing a note
-            if (_expanded && !Island.IsMouseOver) SetExpanded(false);
+            if (App.SnapshotDir == null && _expanded && !Island.IsMouseOver) SetExpanded(false);
         };
         _toastTimer.Tick += (_, _) =>
         {
@@ -1694,6 +1694,7 @@ public partial class MainWindow : Window
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_EFFECT") is { Length: > 0 } ef) S.Effect = ef;
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_CAR") is { Length: > 0 } car) S.Car = car;
         S.Sounds = false; S.MusicMode = "Off"; S.ShowNote = false; S.BgImage = ""; S.BgText = "";
+        S.Notes = Environment.GetEnvironmentVariable("WINDX_SNAP_NOTES") ?? ""; NotesBox.Text = S.Notes; S.PinNote = false; S.Stickies = new();
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_PIN") is { Length: > 0 } pin) { S.PinNote = true; S.Stickies = pin.Split('|').Select((x, i) => new StickyItem { Text = x, Color = new[] { "Yellow", "Pink", "Blue", "Green" }[i % 4] }).ToList(); }
         S.ShowBrightness = S.ShowVolume = S.ShowWifi = S.ShowBluetooth = S.ShowMute = S.ShowSnip = false;
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_NOTE") is { Length: > 0 } ns) { S.ShowNote = true; S.NoteStyle = ns; }
