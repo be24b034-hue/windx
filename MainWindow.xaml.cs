@@ -65,6 +65,7 @@ public partial class MainWindow : Window
     private bool _intro;               // playing the launch animation
     private bool _dormant;             // tucked away by auto-hide
     private bool _hidden;              // fully hidden over a fullscreen app
+    private bool _locked;              // PC locked: draw nothing at all
     private bool _overlay;             // fullscreen app + "Stats" mode: show CPU/RAM
     private DateTime _lastActive = DateTime.UtcNow;
 
@@ -215,6 +216,7 @@ public partial class MainWindow : Window
         _tray = new Tray(OpenSettings, Close);
         SystemEvents.DisplaySettingsChanged += OnDisplayChanged;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        SystemEvents.SessionSwitch += OnSessionSwitch;
 
         _intro = S.IntroAnimation;
         ApplySettings();
@@ -236,10 +238,48 @@ public partial class MainWindow : Window
     {
         SystemEvents.DisplaySettingsChanged -= OnDisplayChanged;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.SessionSwitch -= OnSessionSwitch;
         _settingsWin?.Close();
         _music.Stop();
         _tray?.Dispose();
         _audio.Dispose();
+    }
+
+    private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
+    {
+        bool locked = e.Reason is SessionSwitchReason.SessionLock or SessionSwitchReason.ConsoleDisconnect or SessionSwitchReason.RemoteDisconnect;
+        bool unlocked = e.Reason is SessionSwitchReason.SessionUnlock or SessionSwitchReason.ConsoleConnect or SessionSwitchReason.RemoteConnect;
+        if (!locked && !unlocked) return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            _locked = locked;
+            if (locked)
+            {
+                _frameTimer.Stop();
+                _fxTimer.Stop();
+                ReleaseMemory();
+            }
+            else
+            {
+                EnsureFrameTimer();
+                EnsureFx();
+            }
+        });
+    }
+
+    private double _wantHeight;
+
+    /// <summary>
+    /// Keep the (transparent) window only as tall as the island needs. Every animation frame redraws
+    /// the whole window, so a pill-sized window costs a fraction of a full-height one.
+    /// </summary>
+    private void FitHeight(double need)
+    {
+        need = Math.Clamp(Math.Ceiling(need), 120, 470);
+        _wantHeight = need;
+        if (need >= Height) { Height = need; return; }
+        // Shrink only after the collapse animation has finished, so nothing gets clipped mid-spring.
+        After(750, () => { if (_wantHeight < Height) Height = _wantHeight; });
     }
 
     private void OnDisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(Reposition);
@@ -379,6 +419,7 @@ public partial class MainWindow : Window
         ShowNote();
 
         AnimateIsland(w, h, r);
+        if (App.SnapshotDir == null) FitHeight(8 + h * S.Scale + 70 + (S.ShowNote && !_expanded ? 200 : 0));
         UpdateGlow();
         EnsureFrameTimer();
         EnsureFx();
@@ -486,7 +527,7 @@ public partial class MainWindow : Window
     // ------------------------------------------------------------------ living backdrop
 
     private bool FxWanted =>
-        (Fx.Effect != IslandEffect.None || BgPic.Source != null) && !_hidden && !(_dormant && !_expanded && _toast == Toast.None)
+        (Fx.Effect != IslandEffect.None || BgPic.Source != null) && !_hidden && !_locked && !(_dormant && !_expanded && _toast == Toast.None)
         && (_expanded || _intro || S.EffectWhenIdle || Island.IsMouseOver || DateTime.UtcNow < _fxUntil);
 
     private void EnsureFx()
@@ -503,7 +544,7 @@ public partial class MainWindow : Window
         }
         // Smooth while you're looking at it, a slow drift when it's just sitting there.
         bool active = _expanded || _intro || Island.IsMouseOver;
-        var interval = TimeSpan.FromMilliseconds(active ? 40 : 180);   // 25 fps in use, ~5 fps at rest
+        var interval = TimeSpan.FromMilliseconds(active ? 40 : 250);   // 25 fps in use, 4 fps at rest   // 25 fps in use, ~5 fps at rest
         if (_fxTimer.Interval != interval) _fxTimer.Interval = interval;
 
         if (BgPic.Source != null && active)   // the picture only drifts while you're looking at the open island
@@ -1160,7 +1201,7 @@ public partial class MainWindow : Window
 
     private void EnsureFrameTimer()
     {
-        if (!_frameTimer.IsEnabled && !_hidden && !_dormant && _media.HasMedia) _frameTimer.Start();
+        if (!_frameTimer.IsEnabled && !_hidden && !_locked && !_dormant && _media.HasMedia) _frameTimer.Start();
     }
 
     /// <summary>~30fps while music is on screen: visualizer bars + progress bar. Stops itself when idle.</summary>

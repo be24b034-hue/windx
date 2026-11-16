@@ -49,6 +49,9 @@ public partial class SettingsWindow : Window
         ("\uE72E", "Privacy & about", "What WindX does, and doesn't do, with your data."),
     };
 
+    // The anime-style power pack didn't meet the bar; it stays out of the picker until it's redone.
+    private static readonly string[] HiddenEffects = { "Infinity", "WaterBlade", "FlameBlade", "ThunderStep", "Spiral", "SpiritOrb", "Domain", "BlackFlash", "Beam", "CrimsonMoon" };
+
     public const string Author = "Bharath";
     public const string Institute = "IIT Madras";
 
@@ -274,7 +277,7 @@ public partial class SettingsWindow : Window
         Host.Children.Add(Heading("Living backdrop", "An effect that moves inside the island. They all react to your music: flames leap, waves swell, lightning strikes faster."));
         Host.Children.Add(Card(
             ChoiceRow("Effect", null,
-                Enum.GetNames<IslandEffect>().Select(n => (n, n)).ToArray(),
+                Enum.GetNames<IslandEffect>().Except(HiddenEffects).Select(n => (n, n)).ToArray(),
                 v => S.Effect == v, v => S.Effect = v, stacked: true),
             ChoiceRow("Race car", "The single car shown by the Race effect.",
                 new[] { ("Theme colour", "") }.Concat(Theme.All.Where(t => t.Livery >= 0).Select(t => (t.Name, t.Name))).ToArray(),

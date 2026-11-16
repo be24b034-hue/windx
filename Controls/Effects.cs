@@ -10,6 +10,8 @@ public enum IslandEffect
     Battleground, Ribbons, Galaxy,
     Inferno, Pool, Lights, Mist,   // realistic simulations
     Overgrown, Signal, Sunbeams,   // scenes
+    Infinity, WaterBlade, FlameBlade, ThunderStep, Spiral, SpiritOrb, Domain, BlackFlash, Beam, CrimsonMoon,   // power pack
+    Glass,
 }
 
 /// <summary>

@@ -103,6 +103,7 @@ public sealed class Settings
         Current.Scale = double.IsFinite(Current.Scale) ? Math.Clamp(Current.Scale, 0.85, 1.2) : 1.0;
         if (Current.Effect == "Grid") Current.Effect = "Race";
         if (!Enum.TryParse<WindX.Controls.IslandEffect>(Current.Effect, out _)) Current.Effect = "Wind";
+        if (Current.Effect is "Infinity" or "WaterBlade" or "FlameBlade" or "ThunderStep" or "Spiral" or "SpiritOrb" or "Domain" or "BlackFlash" or "Beam" or "CrimsonMoon") Current.Effect = "Wind";
         if (string.IsNullOrEmpty(Current.Car) || Services.Theme.Resolve(Current.Car).Livery < 0 || Services.Theme.Resolve(Current.Car).Name != Current.Car) Current.Car = "";
         if (Current.AutoHideSeconds is not (-1 or 0 or 5 or 10 or 30 or 60)) Current.AutoHideSeconds = -1;
         Current.IslandOpacity = double.IsFinite(Current.IslandOpacity) ? Math.Clamp(Current.IslandOpacity, 0.4, 1.0) : 1.0;
@@ -203,6 +204,10 @@ public sealed class Theme
         new() { Name = "Porcelain", Bg = "#FFFFFF", Bg2 = "#F3F3F6", Border = "#DCDCE2", Text = "#111113", SubText = "#6E6E76",
                 Track = "#DADAE0", Chip = "#EDEDF1", ChipHover = "#E1E1E7", Accent = "#FF5B1F", OnAccent = "#FFFFFF",
                 IsLight = true },
+
+        // Liquid Glass: a translucent island your desktop shows through, with live highlights (Glass effect).
+        new() { Name = "Liquid Glass", Fx = "Glass", Bg = "#8A10131A", Bg2 = "#6A262C3A", Border = "#99FFFFFF", Text = "#FFFFFF", SubText = "#D5E2E6EE",
+                Track = "#40FFFFFF", Chip = "#2EFFFFFF", ChipHover = "#47FFFFFF", Accent = "#FFFFFF", OnAccent = "#0B0D12", Glow = "#9DB8FF" },
 
         // Gradient themes: a two-colour sweep with frosted (translucent) controls on top.
         new() { Name = "Sunrise", Vivid = true, Group = "Gradient", Bg = "#4A0E4E", Bg2 = "#E2572B", Border = "#55FFFFFF", Text = "#FFFFFF", SubText = "#E8D5DC",

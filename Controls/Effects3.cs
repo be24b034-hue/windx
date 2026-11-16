@@ -17,6 +17,7 @@ public sealed partial class EffectLayer
             case IslandEffect.Ribbons: Ribbons(dc, w, h); break;
             case IslandEffect.Galaxy: Galaxy(dc, w, h); break;
             case IslandEffect.Overgrown or IslandEffect.Signal or IslandEffect.Sunbeams: Scenes(dc, w, h); break;
+            default: Powers(dc, w, h); break;
             case IslandEffect.Inferno or IslandEffect.Pool or IslandEffect.Lights or IslandEffect.Mist: Pixel(dc, w, h); break;
         }
     }
