@@ -62,6 +62,14 @@ public sealed class Settings
     public double? WeatherLon { get; set; }
     public bool Fahrenheit { get; set; }
 
+    public bool ShowNotesTab { get; set; } = true;
+    public bool ShowFocusTab { get; set; } = true;
+    /// <summary>A small sticky note stuck on the island showing the start of your note.</summary>
+    public bool PinNote { get; set; }
+
+    /// <summary>Free text from the island's Notes tab.</summary>
+    public string Notes { get; set; } = "";
+
     /// <summary>Reminders that pop up on the island at a set time.</summary>
     public List<ReminderItem> Reminders { get; set; } = new();
 
@@ -119,6 +127,8 @@ public sealed class Settings
         string pic = Current.BgImage.Length is > 3 and < 260 ? Path.GetExtension(Current.BgImage).ToLowerInvariant() : "";
         if (pic is not (".png" or ".jpg" or ".jpeg" or ".bmp") || !Path.IsPathFullyQualified(Current.BgImage)) Current.BgImage = "";
         Current.BgImageDim = double.IsFinite(Current.BgImageDim) ? Math.Clamp(Current.BgImageDim, 0, 0.8) : 0.45;
+        Current.Notes ??= "";
+        if (Current.Notes.Length > 4000) Current.Notes = Current.Notes[..4000];
         Current.Reminders ??= new();
         Current.Reminders.RemoveAll(r => r == null || string.IsNullOrWhiteSpace(r.Text)
             || !TimeSpan.TryParseExact(r.Time, "hh\\:mm", System.Globalization.CultureInfo.InvariantCulture, out _));

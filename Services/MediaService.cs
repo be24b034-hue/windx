@@ -28,7 +28,11 @@ public sealed class MediaService
 
     public event Action? Changed;
 
-    public bool HasMedia { get; private set; }
+    private bool _has, _dismissed;
+    private string _dismissTitle = "";
+
+    /// <summary>Something is loaded, and the user hasn't closed it from the island.</summary>
+    public bool HasMedia => _has && !_dismissed;
     public bool IsPlaying { get; private set; }
     public string Title { get; private set; } = "";
     public string Artist { get; private set; } = "";
@@ -143,7 +147,9 @@ public sealed class MediaService
             _positionStamp = DateTime.UtcNow;
 
             var info = s.GetPlaybackInfo();
+            bool was = IsPlaying;
             IsPlaying = info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+            if (_dismissed && IsPlaying && !was && DateTime.UtcNow > _dismissedAt.AddSeconds(2)) _dismissed = false;   // played again
             CanPrevious = info.Controls.IsPreviousEnabled;
             CanNext = info.Controls.IsNextEnabled;
             CanSeek = info.Controls.IsPlaybackPositionEnabled;
@@ -192,7 +198,8 @@ public sealed class MediaService
             Title = props?.Title ?? "";
             Artist = props?.Artist ?? "";
             if (string.IsNullOrWhiteSpace(Artist)) Artist = props?.AlbumArtist ?? "";
-            HasMedia = !string.IsNullOrWhiteSpace(Title);
+            _has = !string.IsNullOrWhiteSpace(Title);
+            if (_dismissed && Title != _dismissTitle) _dismissed = false;   // a new track brings it back
 
             ImageSource? art = null;
             var thumb = props?.Thumbnail;
@@ -233,12 +240,24 @@ public sealed class MediaService
 
     private void Clear()
     {
-        HasMedia = false;
+        _has = false;
         IsPlaying = false;
         Title = Artist = "";
         Art = null;
         Duration = TimeSpan.Zero;
         _position = TimeSpan.Zero;
+    }
+
+    private DateTime _dismissedAt;
+
+    /// <summary>Pause and hide the player until the user plays something again.</summary>
+    public void Dismiss()
+    {
+        if (IsPlaying) Run(s => s.TryPauseAsync());
+        _dismissed = true;
+        _dismissTitle = Title;
+        _dismissedAt = DateTime.UtcNow;
+        Changed?.Invoke();
     }
 
     public void TogglePlay() => Run(s => s.TryTogglePlayPauseAsync());

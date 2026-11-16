@@ -36,6 +36,25 @@
             </StackPanel>
         </Grid>
 
+        <!-- Your note, stuck onto the island like a sticky note -->
+        <Border x:Name="PinNote" Width="132" MinHeight="34" HorizontalAlignment="Left" VerticalAlignment="Top"
+                Background="#FFE566" CornerRadius="3" Padding="10,7,10,8" Opacity="0" IsHitTestVisible="False" Cursor="Hand"
+                RenderTransformOrigin="0.9,0.1">
+            <Border.RenderTransform>
+                <RotateTransform x:Name="PinTilt" Angle="-5"/>
+            </Border.RenderTransform>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Direction="290" Opacity="0.35"/>
+            </Border.Effect>
+            <Grid>
+                <Border Width="34" Height="9" Background="#55FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-12,-4,0">
+                    <Border.RenderTransform><RotateTransform Angle="18"/></Border.RenderTransform>
+                </Border>
+                <TextBlock x:Name="PinText" FontFamily="Ink Free, Segoe Print, Segoe UI" FontSize="13" FontWeight="SemiBold"
+                           Foreground="#3A3300" TextWrapping="Wrap" MaxHeight="54" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </Border>
+
         <Grid x:Name="Island" Width="36" Height="36" Margin="0,8,0,0"
               HorizontalAlignment="Center" VerticalAlignment="Top"
               RenderTransformOrigin="0.5,0" Cursor="Hand">
@@ -250,7 +269,7 @@
                                 <TextBlock x:Name="EArtist" FontSize="13" Margin="0,3,0,0"
                                            Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis"/>
                             </StackPanel>
-                            <c:VisualizerBars x:Name="EBars" Grid.Column="2" Height="24" VerticalAlignment="Center"
+                            <c:VisualizerBars x:Name="EBars" Grid.Column="2" Height="24" VerticalAlignment="Bottom"
                                               Margin="0,0,4,0"/>
                         </Grid>
 
@@ -291,6 +310,31 @@
                                 <c:BatteryGlyph Stroke="{DynamicResource TextSecondary}" x:Name="EBatteryGlyph" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Grid>
+                    </Grid>
+                </Grid>
+
+                <!-- Close the player: pauses the music and hides it until something plays again -->
+                <Button x:Name="BtnDismiss" Style="{DynamicResource GlyphButton}" Content="&#xE711;" Width="28" Height="28" FontSize="11"
+                        HorizontalAlignment="Center" VerticalAlignment="Top" Margin="358,12,0,0" Click="BtnDismiss_Click"
+                        Visibility="Collapsed" Foreground="{DynamicResource TextSecondary}"/>
+
+                <!-- ============ EXPANDED: NOTES ============ -->
+                <Grid x:Name="NotesPage" Width="400" Height="186"
+                      HorizontalAlignment="Center" VerticalAlignment="Top"
+                      Opacity="0" IsHitTestVisible="False">
+                    <Grid x:Name="NotesBody" Margin="20,16,20,4">
+                        <TextBlock Text="NOTES" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Accent}" VerticalAlignment="Top"/>
+                        <TextBlock x:Name="NotesSaved" FontSize="11" Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                        <Border Margin="0,22,0,0" CornerRadius="14" Background="{DynamicResource ChipBg}" Padding="12,9">
+                            <Grid>
+                                <TextBlock x:Name="NotesHint" Text="Click here and start typing. It saves by itself." FontSize="13.5"
+                                           Foreground="{DynamicResource TextSecondary}" IsHitTestVisible="False"/>
+                                <TextBox x:Name="NotesBox" Background="Transparent" BorderThickness="0" FontSize="13.5"
+                                         Foreground="{DynamicResource TextPrimary}" CaretBrush="{DynamicResource Accent}"
+                                         AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" MaxLength="4000"
+                                         VerticalScrollBarVisibility="Auto" FontFamily="Segoe UI Variable Text, Segoe UI"/>
+                            </Grid>
+                        </Border>
                     </Grid>
                 </Grid>
 
@@ -548,6 +592,7 @@
                             <RadioButton x:Name="TabSystem" Style="{DynamicResource TabButton}" Content="&#xE9D9;"
                                          Click="Tab_Click" Tag="2"/>
                             <RadioButton x:Name="TabFocus" Style="{DynamicResource TabButton}" Content="&#xE916;" Click="Tab_Click" Tag="3"/>
+                            <RadioButton x:Name="TabNotes" Style="{DynamicResource TabButton}" Content="&#xE70B;" Click="Tab_Click" Tag="4"/>
                         </StackPanel>
                         <Button Style="{DynamicResource GlyphButton}" Width="28" Height="28" FontSize="13"
                                 Content="&#xE713;" Click="Gear_Click" HorizontalAlignment="Right" VerticalAlignment="Center"

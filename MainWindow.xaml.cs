@@ -46,6 +46,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _fxTimer = new(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(40) };
     private DateTime _fxUntil = DateTime.MinValue;
     private int _introStage;           // 0 = a dot dropping in, 1 = logo reveal
+    private readonly DispatcherTimer _notesSave = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private readonly DispatcherTimer _hitTimer = new() { Interval = TimeSpan.FromMilliseconds(60) };
     private bool _passThrough;
     private bool _noteShown;
@@ -117,7 +118,7 @@ public partial class MainWindow : Window
 
         _views = new FrameworkElement[]
         {
-            CompactView, ToastView, StatsCompact, IntroView, ExpandedMedia, ExpandedIdle, DayPage, SystemPage, FocusPage,
+            CompactView, ToastView, StatsCompact, IntroView, ExpandedMedia, ExpandedIdle, DayPage, SystemPage, FocusPage, NotesPage,
         };
         foreach (var v in _views)
         {
@@ -161,6 +162,32 @@ public partial class MainWindow : Window
         DayPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
         SystemPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
         FocusPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
+        NotesPage.MouseLeftButtonUp += (_, e) => e.Handled = true;
+        PinNote.MouseLeftButtonUp += (_, e) => { e.Handled = true; SetExpanded(true); SelectPage(4); ApplyState(); };
+        Island.SizeChanged += (_, _) => PlacePin();
+        NotesBox.Text = S.Notes;
+        NotesHint.Visibility = S.Notes.Length > 0 ? Visibility.Collapsed : Visibility.Visible;
+        NotesBox.PreviewMouseLeftButtonDown += (_, _) => AllowTyping(true);
+        NotesBox.TextChanged += (_, _) =>
+        {
+            NotesHint.Visibility = NotesBox.Text.Length > 0 ? Visibility.Collapsed : Visibility.Visible;
+            NotesSaved.Text = "Saving…";
+            _notesSave.Stop();
+            _notesSave.Start();
+        };
+        _notesSave.Tick += (_, _) =>
+        {
+            _notesSave.Stop();
+            S.Notes = NotesBox.Text;
+            Settings.Save();
+            NotesSaved.Text = "Saved";
+            UpdatePin();
+        };
+        Deactivated += (_, _) =>
+        {
+            AllowTyping(false);
+            if (_expanded && !Island.IsMouseOver) SetExpanded(false);
+        };
         TabBar.MouseLeftButtonUp += (_, e) => e.Handled = true;
 
         VolSlider.UserChanged += v => _audio.SetVolume((float)v);
@@ -175,7 +202,7 @@ public partial class MainWindow : Window
         _collapseTimer.Tick += (_, _) =>
         {
             _collapseTimer.Stop();
-            if (Mouse.Captured != null) { _collapseTimer.Start(); return; } // mid-drag on a slider
+            if (Mouse.Captured != null || NotesBox.IsKeyboardFocusWithin) { _collapseTimer.Start(); return; } // dragging a slider or typing a note
             if (_expanded && !Island.IsMouseOver) SetExpanded(false);
         };
         _toastTimer.Tick += (_, _) =>
@@ -378,6 +405,7 @@ public partial class MainWindow : Window
                 case 1: view = DayPage; h = DayPage.Height; break;
                 case 2: view = SystemPage; h = SystemPage.Height; break;
                 case 3: view = FocusPage; h = FocusPage.Height; break;
+                case 4: view = NotesPage; h = NotesPage.Height; break;
                 default:
                     double top;
                     if (_media.HasMedia) { view = ExpandedMedia; top = ExpandedMedia.Height; }
@@ -412,9 +440,13 @@ public partial class MainWindow : Window
         }
 
         ShowView(view);
+        BtnDismiss.Visibility = ReferenceEquals(view, ExpandedMedia) ? Visibility.Visible : Visibility.Collapsed;
+        bool busy = Fx.Effect is IslandEffect.Overgrown or IslandEffect.Battleground or IslandEffect.Signal or IslandEffect.Race or IslandEffect.Cats or IslandEffect.Galaxy or IslandEffect.Synthwave;
+        Animate(Fx, OpacityProperty, _expanded && busy ? 0.32 : 1, 300, _smooth);
         Fade(ControlsPanel, controls);
         Fade(TabBar, _expanded && !_intro);
         WakeZone.Visibility = _dormant && !_expanded ? Visibility.Visible : Visibility.Collapsed;
+        UpdatePin();
         Animate(BgName, OpacityProperty, _expanded && !_intro && BgName.Text.Length > 0 ? 0.13 : 0, 350, _smooth);
         ShowNote();
 
@@ -462,6 +494,7 @@ public partial class MainWindow : Window
                 else if (ReferenceEquals(v, DayPage)) Stagger(DayBody.Children);
                 else if (ReferenceEquals(v, SystemPage)) Stagger(RingRow.Children.Cast<UIElement>().Append(SysLine));
                 else if (ReferenceEquals(v, FocusPage)) Stagger(FocusBody.Children);
+                else if (ReferenceEquals(v, NotesPage)) Stagger(NotesBody.Children);
                 if (ReferenceEquals(v, ExpandedMedia) || ReferenceEquals(v, ExpandedIdle)) Stagger(ControlsBody.Children, 300);
             }
             else
@@ -657,6 +690,7 @@ public partial class MainWindow : Window
             _ = RefreshControlsAsync();
         }
         ApplyState();
+        if (!on) AllowTyping(false);
         if (!on && !Island.IsMouseOver) CheckAutoHide();
         if (!on) After(4000, () => { if (!_expanded && _settingsWin == null) ReleaseMemory(); });
     }
@@ -670,7 +704,7 @@ public partial class MainWindow : Window
     private void SelectPage(int page)
     {
         _page = page;
-        (page == 1 ? TabDay : page == 2 ? TabSystem : page == 3 ? TabFocus : TabHome).IsChecked = true;
+        (page == 1 ? TabDay : page == 2 ? TabSystem : page == 3 ? TabFocus : page == 4 ? TabNotes : TabHome).IsChecked = true;
         if (page == 3) UpdateFocusUi();
         if (_page == 1)
         {
@@ -690,6 +724,35 @@ public partial class MainWindow : Window
     private void Gear_Click(object sender, RoutedEventArgs e) => OpenSettings();
 
     private void BtnPrev_Click(object sender, RoutedEventArgs e) => _media.Previous();
+
+    private void BtnDismiss_Click(object sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        _media.Dismiss();
+        Sfx.Play("close");
+    }
+
+    /// <summary>
+    /// The island normally never takes keyboard focus (so it can't steal it from your apps).
+    /// The Notes box is the one exception: while you type there, the island accepts the keyboard.
+    /// </summary>
+    private void AllowTyping(bool on)
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        long ex = GetWindowLongPtr(_hwnd, GWL_EXSTYLE).ToInt64();
+        long want = on ? ex & ~WS_EX_NOACTIVATE : ex | WS_EX_NOACTIVATE;
+        if (want != ex) SetWindowLongPtr(_hwnd, GWL_EXSTYLE, new IntPtr(want));
+        if (on)
+        {
+            Activate();
+            NotesBox.Focus();
+        }
+        else if (NotesBox.IsKeyboardFocusWithin)
+        {
+            Keyboard.ClearFocus();
+            if (_notesSave.IsEnabled) { _notesSave.Stop(); S.Notes = NotesBox.Text; Settings.Save(); }
+        }
+    }
     private void BtnPlay_Click(object sender, RoutedEventArgs e) => _media.TogglePlay();
     private void BtnNext_Click(object sender, RoutedEventArgs e) => _media.Next();
 
@@ -833,6 +896,40 @@ public partial class MainWindow : Window
         NoteSwing.BeginAnimation(RotateTransform.AngleProperty, sway);
     }
 
+    // ------------------------------------------------------------------ pinned note
+
+    private bool _pinShown;
+
+    private void UpdatePin()
+    {
+        string first = (S.Notes ?? "").Trim();
+        int nl = first.IndexOfAny(new[] { '\r', '\n' });
+        if (nl > 0) first = first[..nl];
+        if (first.Length > 60) first = first[..60] + "…";
+        PinText.Text = first;
+        bool on = S.PinNote && first.Length > 0 && !_expanded && !_intro && !_dormant && !_hidden && !_overlay;
+        if (on == _pinShown) return;
+        _pinShown = on;
+        PinNote.IsHitTestVisible = on;
+        Animate(PinNote, OpacityProperty, on ? 1 : 0, on ? 380 : 140, _smooth);
+        if (on)
+        {
+            PlacePin();
+            // Slaps on with a little wobble.
+            var wob = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromMilliseconds(700) };
+            foreach (var (a, p) in new[] { (-14.0, 0.0), (2.0, 0.35), (-7.0, 0.6), (-4.0, 0.8), (-5.0, 1.0) })
+                wob.KeyFrames.Add(new EasingDoubleKeyFrame(a, KeyTime.FromPercent(p), new SineEase()));
+            PinTilt.BeginAnimation(RotateTransform.AngleProperty, wob);
+        }
+    }
+
+    /// <summary>Stuck onto the island's left end, overlapping it a little.</summary>
+    private void PlacePin()
+    {
+        double left = Width / 2 - Island.ActualWidth * S.Scale / 2 - PinNote.Width + 18;
+        PinNote.Margin = new Thickness(Math.Max(4, left), 10, 0, 0);
+    }
+
     // ------------------------------------------------------------------ click-through
 
     /// <summary>
@@ -843,7 +940,7 @@ public partial class MainWindow : Window
     {
         if (_hwnd == IntPtr.Zero || !GetCursorPos(out POINT p)) return;
         bool over = Mouse.Captured != null
-            || (!_hidden && (Over(Island, p, 3) || (_noteShown && Over(NoteHost, p, 0)) || (_dormant && Over(WakeZone, p, 0))));
+            || (!_hidden && (Over(Island, p, 3) || (_noteShown && Over(NoteHost, p, 0)) || (_pinShown && Over(PinNote, p, 2)) || (_dormant && Over(WakeZone, p, 0))));
         if (over != _passThrough) return;
         _passThrough = !over;
         long ex = GetWindowLongPtr(_hwnd, GWL_EXSTYLE).ToInt64();
@@ -1136,6 +1233,9 @@ public partial class MainWindow : Window
         BgPic.Opacity = BgPic.Source != null ? 1 : 0;
         BgScrim.Opacity = BgPic.Source != null ? S.BgImageDim : 0;
         Shell.Opacity = S.IslandOpacity;
+        TabNotes.Visibility = S.ShowNotesTab ? Visibility.Visible : Visibility.Collapsed;
+        TabFocus.Visibility = S.ShowFocusTab ? Visibility.Visible : Visibility.Collapsed;
+        if ((_page == 4 && !S.ShowNotesTab) || (_page == 3 && !S.ShowFocusTab)) SelectPage(0);
         BgName.Text = (S.BgText.Length > 0 ? S.BgText : Theme.Current.Group == "Teams" ? Theme.Current.Name : "").ToUpperInvariant();
         BgName.FontSize = BgName.Text.Length > 12 ? 34 : 50;
         Fx.Label = BgName.Text.Length > 0 ? BgName.Text : Theme.Current.Name.ToUpperInvariant();
@@ -1533,6 +1633,7 @@ public partial class MainWindow : Window
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_EFFECT") is { Length: > 0 } ef) S.Effect = ef;
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_CAR") is { Length: > 0 } car) S.Car = car;
         S.Sounds = false; S.MusicMode = "Off"; S.ShowNote = false; S.BgImage = ""; S.BgText = "";
+        if (Environment.GetEnvironmentVariable("WINDX_SNAP_PIN") is { Length: > 0 } pin) { S.PinNote = true; S.Notes = pin; }
         S.ShowBrightness = S.ShowVolume = S.ShowWifi = S.ShowBluetooth = S.ShowMute = S.ShowSnip = false;
         if (Environment.GetEnvironmentVariable("WINDX_SNAP_NOTE") is { Length: > 0 } ns) { S.ShowNote = true; S.NoteStyle = ns; }
         ApplySettings();
@@ -1542,7 +1643,7 @@ public partial class MainWindow : Window
         SetExpanded(true); await Task.Delay(1500); Shot("2-home");
         SelectPage(1); await Task.Delay(1200); Shot("3-calendar");
         SelectPage(2); await Task.Delay(1300); SystemStats.Sample(); UpdateStatsUi(); await Task.Delay(300); Shot("4-system");
-        SelectPage(3); await Task.Delay(1100); Shot("4b-focus");
+        SelectPage(3); await Task.Delay(1100); Shot("4b-focus"); SelectPage(4); await Task.Delay(1100); Shot("4c-notes");
         SetExpanded(false); _overlay = true; SystemStats.Sample(); UpdateStatsUi(); ApplyState(); await Task.Delay(1200); Shot("5-game-overlay");
         _overlay = false; _dormant = true; ApplyState(); await Task.Delay(1200); Shot("6-auto-hidden");
         _dormant = false; UpdateVolumeUi(); _toast = Toast.Volume; TVolume.Visibility = Visibility.Visible; ApplyState(); await Task.Delay(1200); Shot("7-volume");

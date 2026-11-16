@@ -513,7 +513,10 @@ public partial class SettingsWindow : Window
                 new[] { ("Hide", "Hide"), ("CPU / RAM overlay", "Stats"), ("Show", "Show") },
                 v => S.FullscreenMode == v, v => S.FullscreenMode = v, stacked: true),
             SwitchRow("Show battery", null, () => S.ShowBattery, v => S.ShowBattery = v),
-            SwitchRow("24-hour clock", null, () => S.Use24Hour, v => S.Use24Hour = v)));
+            SwitchRow("24-hour clock", null, () => S.Use24Hour, v => S.Use24Hour = v),
+            SwitchRow("Timer & Pomodoro tab", "The stopwatch page inside the open island", () => S.ShowFocusTab, v => S.ShowFocusTab = v),
+            SwitchRow("Notes tab", "A page inside the island where you can type notes", () => S.ShowNotesTab, v => S.ShowNotesTab = v),
+            SwitchRow("Pin my note on the island", "A sticky note on the island showing the first line of your note. Click it to open your notes.", () => S.PinNote, v => S.PinNote = v)));
     }
 
     private void BuildWeather()
